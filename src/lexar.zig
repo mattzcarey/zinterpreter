@@ -28,8 +28,32 @@ const Lexer = struct {
         self.read_position += 1;
     }
 
+    fn skip_whitespace(self: *Lexer) void {
+        while (self.ch == ' ' or self.ch == '\t' or self.ch == '\n' or self.ch == '\r') {
+            self.read_char();
+        }
+    }
+
+    fn read_number(self: *Lexer) []const u8 {
+        const start = self.position;
+        while (std.ascii.isDigit(self.ch)) {
+            self.read_char();
+        }
+        return self.input[start..self.position];
+    }
+
+    fn read_identifier(self: *Lexer) []const u8 {
+        const start = self.position;
+        while (is_letter(self.ch)) {
+            self.read_char();
+        }
+        return self.input[start..self.position];
+    }
+
     fn next_token(self: *Lexer) Token {
         var tok: Token = undefined;
+
+        self.skip_whitespace();
 
         switch (self.ch) {
             '=' => tok = Token{ .Type = TokenTypes.ASSIGN, .Literal = "=" },
@@ -43,7 +67,11 @@ const Lexer = struct {
             0 => tok = Token{ .Type = TokenTypes.EOF, .Literal = "" },
             else => {
                 if (is_letter(self.ch)) {
-                    return Token{ .Type = lookup_ident(self.read_identifier()), .Literal = self.read_identifier() };
+                    const identifier = self.read_identifier();
+                    return Token{ .Type = token.lookup_ident(identifier), .Literal = identifier };
+                } else if (std.ascii.isDigit(self.ch)) {
+                    const number = self.read_number();
+                    return Token{ .Type = token.TokenTypes.INT, .Literal = number };
                 } else {
                     tok = new_token(token.TokenTypes.ILLEGAL, self.ch);
                 }
@@ -53,30 +81,7 @@ const Lexer = struct {
         self.read_char();
         return tok;
     }
-
-    fn read_identifier(self: *Lexer) []const u8 {
-        const start = self.position;
-        while (is_letter(self.ch)) {
-            self.read_char();
-        }
-        return self.input[start..self.position];
-    }
 };
-
-const keywords = struct {
-    pub fn get(text: []const u8) ?token.TokenType {
-        if (std.mem.eql(u8, text, "fn")) return token.TokenTypes.FUNCTION;
-        if (std.mem.eql(u8, text, "let")) return token.TokenTypes.LET;
-        return null;
-    }
-};
-
-fn lookup_ident(ident: []const u8) token.TokenType {
-    if (keywords.get(ident)) |tok| {
-        return tok;
-    }
-    return token.TokenTypes.IDENT;
-}
 
 fn is_letter(ch: u8) bool {
     return std.ascii.isAlphabetic(ch) or ch == '_';
@@ -88,9 +93,15 @@ fn new_token(token_type: token.TokenType, ch: u8) Token {
     return Token{ .Type = token_type, .Literal = literal[0..] };
 }
 
-// tests
 test "test_next_token" {
-    const input = "let five = 5;let ten = 10;let add = fn(x, y) { x + y; };let result = add(five, ten);";
+    const input =
+        \\let five = 5;
+        \\let ten = 10;
+        \\let add = fn(x, y) {
+        \\    x + y;
+        \\}
+        \\let result = add(five, ten);
+    ;
 
     const tests = [_]Token{
         Token{ .Type = token.TokenTypes.LET, .Literal = "let" },
@@ -117,6 +128,7 @@ test "test_next_token" {
         Token{ .Type = token.TokenTypes.PLUS, .Literal = "+" },
         Token{ .Type = token.TokenTypes.IDENT, .Literal = "y" },
         Token{ .Type = token.TokenTypes.SEMICOLON, .Literal = ";" },
+        Token{ .Type = token.TokenTypes.RBRACE, .Literal = "}" },
         Token{ .Type = token.TokenTypes.LET, .Literal = "let" },
         Token{ .Type = token.TokenTypes.IDENT, .Literal = "result" },
         Token{ .Type = token.TokenTypes.ASSIGN, .Literal = "=" },
@@ -134,6 +146,7 @@ test "test_next_token" {
 
     for (tests) |tt| {
         const tok = l.next_token();
+
         try testing.expect(std.mem.eql(u8, tok.Type, tt.Type));
         try testing.expect(std.mem.eql(u8, tok.Literal, tt.Literal));
     }
