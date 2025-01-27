@@ -59,6 +59,12 @@ const Lexer = struct {
             '=' => tok = Token{ .Type = TokenTypes.ASSIGN, .Literal = "=" },
             ';' => tok = Token{ .Type = TokenTypes.SEMICOLON, .Literal = ";" },
             '+' => tok = Token{ .Type = TokenTypes.PLUS, .Literal = "+" },
+            '-' => tok = Token{ .Type = TokenTypes.MINUS, .Literal = "-" },
+            '!' => tok = Token{ .Type = TokenTypes.BANG, .Literal = "!" },
+            '*' => tok = Token{ .Type = TokenTypes.ASTERISK, .Literal = "*" },
+            '/' => tok = Token{ .Type = TokenTypes.SLASH, .Literal = "/" },
+            '<' => tok = Token{ .Type = TokenTypes.LT, .Literal = "<" },
+            '>' => tok = Token{ .Type = TokenTypes.GT, .Literal = ">" },
             '(' => tok = Token{ .Type = token.TokenTypes.LPAREN, .Literal = "(" },
             ')' => tok = Token{ .Type = TokenTypes.RPAREN, .Literal = ")" },
             ',' => tok = Token{ .Type = TokenTypes.COMMA, .Literal = "," },
@@ -100,7 +106,17 @@ test "test_next_token" {
         \\let add = fn(x, y) {
         \\    x + y;
         \\}
+        \\
         \\let result = add(five, ten);
+        \\!-/*5;
+        \\5 < 10 > 5;
+        \\
+        \\if (5 < 10) {
+        \\    return true;
+        \\} else {
+        \\    return false;
+        \\}
+        \\
     ;
 
     const tests = [_]Token{
@@ -139,6 +155,35 @@ test "test_next_token" {
         Token{ .Type = token.TokenTypes.IDENT, .Literal = "ten" },
         Token{ .Type = token.TokenTypes.RPAREN, .Literal = ")" },
         Token{ .Type = token.TokenTypes.SEMICOLON, .Literal = ";" },
+        Token{ .Type = token.TokenTypes.BANG, .Literal = "!" },
+        Token{ .Type = token.TokenTypes.MINUS, .Literal = "-" },
+        Token{ .Type = token.TokenTypes.SLASH, .Literal = "/" },
+        Token{ .Type = token.TokenTypes.ASTERISK, .Literal = "*" },
+        Token{ .Type = token.TokenTypes.INT, .Literal = "5" },
+        Token{ .Type = token.TokenTypes.SEMICOLON, .Literal = ";" },
+        Token{ .Type = token.TokenTypes.INT, .Literal = "5" },
+        Token{ .Type = token.TokenTypes.LT, .Literal = "<" },
+        Token{ .Type = token.TokenTypes.INT, .Literal = "10" },
+        Token{ .Type = token.TokenTypes.GT, .Literal = ">" },
+        Token{ .Type = token.TokenTypes.INT, .Literal = "5" },
+        Token{ .Type = token.TokenTypes.SEMICOLON, .Literal = ";" },
+        Token{ .Type = token.TokenTypes.IF, .Literal = "if" },
+        Token{ .Type = token.TokenTypes.LPAREN, .Literal = "(" },
+        Token{ .Type = token.TokenTypes.INT, .Literal = "5" },
+        Token{ .Type = token.TokenTypes.LT, .Literal = "<" },
+        Token{ .Type = token.TokenTypes.INT, .Literal = "10" },
+        Token{ .Type = token.TokenTypes.RPAREN, .Literal = ")" },
+        Token{ .Type = token.TokenTypes.LBRACE, .Literal = "{" },
+        Token{ .Type = token.TokenTypes.RETURN, .Literal = "return" },
+        Token{ .Type = token.TokenTypes.TRUE, .Literal = "true" },
+        Token{ .Type = token.TokenTypes.SEMICOLON, .Literal = ";" },
+        Token{ .Type = token.TokenTypes.RBRACE, .Literal = "}" },
+        Token{ .Type = token.TokenTypes.ELSE, .Literal = "else" },
+        Token{ .Type = token.TokenTypes.LBRACE, .Literal = "{" },
+        Token{ .Type = token.TokenTypes.RETURN, .Literal = "return" },
+        Token{ .Type = token.TokenTypes.FALSE, .Literal = "false" },
+        Token{ .Type = token.TokenTypes.SEMICOLON, .Literal = ";" },
+        Token{ .Type = token.TokenTypes.RBRACE, .Literal = "}" },
         Token{ .Type = token.TokenTypes.EOF, .Literal = "" },
     };
 
@@ -146,6 +191,8 @@ test "test_next_token" {
 
     for (tests) |tt| {
         const tok = l.next_token();
+        // std.debug.print("Expected Type: {s}, Got: {s}\n", .{ tt.Type, tok.Type });
+        // std.debug.print("Expected Literal: {s}, Got: {s}\n", .{ tt.Literal, tok.Literal });
 
         try testing.expect(std.mem.eql(u8, tok.Type, tt.Type));
         try testing.expect(std.mem.eql(u8, tok.Literal, tt.Literal));
